@@ -1,0 +1,82 @@
+{{- $image := printf "%s:%s" .Values.image.repository  .Values.image.tag }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.appName }}-{{ .Values.verFmt }}
+  labels:
+    app: {{ .Values.appName }}-{{ .Values.verFmt }}-dpl-label
+    environment: {{ .Values.environment }}-dpl-label
+spec:
+  replicas: {{ .Values.replicas }}
+  selector:
+    matchLabels:
+      app: {{ .Values.appName }}-{{ .Values.verFmt }}-label
+      environment: {{ .Values.environment }}-label
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.appName }}-{{ .Values.verFmt }}-label
+        environment: {{ .Values.environment }}-label
+        azure.workload.identity/use: "true"
+    spec:
+      # Azure ACR
+      # imagePullSecrets:
+      #   - name: secreto-acr
+      {{- if .Values.keyVault.enabled }}
+      serviceAccountName: sa-{{ .Values.appName }}-{{ .Values.verFmt }}
+      {{- end}}
+      containers:
+        - name: {{ .Values.appName }}-{{ .Values.verFmt }}-container
+          image: {{ $image }}
+          # image: jhaeacr.azurecr.io/jhae/ms-users/{{ .Values.appName }}-{{ .Values.verFmt }}:latest
+          ports:
+          - containerPort: 8080
+          
+          env:
+
+              # Ocultar Nulos
+            # - name: QUARKUS_JACKSON_SERIALIZATION_INCLUSION
+            #   value: "non_null"
+            - name: APP_NOMBRE
+              value: "Desa Faltor"
+
+          envFrom:
+            - configMapRef:
+                name: {{ .Values.appName }}-{{ .Values.verFmt }}-config  #doble indentacion
+            
+      {{- if .Values.keyVault.enabled }}
+            - secretRef:
+                name: {{ .Values.appName }}-{{ .Values.verFmt }}-secrets-kv
+          
+          # Montaje CSI Driver para los secrets de kv
+          volumeMounts:
+            - name: secrets-store-inline
+              mountPath: "/mnt/secrets-store"
+              readOnly: true
+      volumes:
+        - name: secrets-store-inline
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: {{ .Values.appName }}-{{ .Values.verFmt }}-secprovclass
+      {{- end }}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.appName }}-{{ .Values.verFmt }}-svc
+  labels:
+    app: {{ .Values.appName }}-{{ .Values.verFmt }}-svc-label
+    environment: {{ .Values.environment }}-svc-label
+spec:
+  type: ClusterIP
+  selector:
+    app: {{ .Values.appName }}-{{ .Values.verFmt }}-label
+    environment: {{ .Values.environment }}-label
+  ports:
+    - protocol: TCP
+      name: http
+      port: 8080
+      targetPort: 8080

@@ -1,0 +1,6 @@
+appName: REPO_NAME
+version: APP_VERSION
+versionFmt: APP_VER_FMT
+
+properties:
+  appAlias: "aliasDefault"
