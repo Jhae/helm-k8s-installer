@@ -1,13 +1,13 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ .Values.appName }}-{{ .Values.verFmt }}-config
+  name: {{ .Values.name }}-{{ .Values.verFmt }}-config
 data:
   {{- range $key, $val := .Values.properties }}
   {{ $key }}: {{ $val | quote }}
   {{- end }}
 
-  QUARKUS_OTEL_SERVICE_NAME: {{ .Values.appName }}-{{ .Values.verFmt }}
+  QUARKUS_OTEL_SERVICE_NAME: {{ .Values.name }}-{{ .Values.verFmt }}
 
 
   
